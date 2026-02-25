@@ -1,113 +1,102 @@
-let bird = document.getElementById('bird');
+const game = document.getElementById("game");
+const bird = document.getElementById("bird");
+const scoreDisplay = document.getElementById("score");
+const gameOverScreen = document.getElementById("game-over");
+
 let birdTop = 250;
-let birdLeft = 50;
-let gravity = 2;
-let gameSpeed = 2;
-
+let gravity = 0.3;
+let velocity = 0;
 let isGameOver = false;
-
-//initialize the game
-function initializeGame() {
-    birdTop = 250;
-    isGameOver = false;
-    document.addEventListener("keydown", jump);
-}
-
-//jump the bird
-function jump() {
-    if(!isGameOver) {
-        birdTop -= 50;
-    }
-}
-
-//apply gravity
-
-function applyGravity() {
-    if(!isGameOver) {
-        birdTop += gravity;
-        bird.style.top = birdTop + "px";
-    }
-}
-
-//Move the pipes
-function movePipes() {
-    const pipes = document.querySelectorAll('.pipe');
-    pipes.forEach(element => {
-        let pipeLeft = parseInt(element.style.left);
-        if(pipeLeft >= -60) {
-            element.style.left = (pipeLeft - gameSpeed) + "px"; 
-        } else {
-            element.style.left = "400px";
-        }
-    })
-}
-
-//detect the collision
-function detectCollision() {
-    const pipes = document.querySelectorAll('.pipe');
-    pipes.forEach(element => {
-        let pipeLeft = parseInt(element.style.left);
-        if(
-            birdLeft + 40 > pipeLeft &&
-            birdLeft < pipeLeft + 60 &&
-            birdTop + 40 > parseInt(element.style.top) &&
-            birdTop < parseInt(element.style.top) + parseInt(element.style.height)
-        ) {
-            gameOver();
-        }
-    })
-    if(birdTop <= 0 || birdTop >= 560) {
-        gameOver();
-    }
-}
-
-//gameOver
-function gameOver() {
-    isGameOver = true;
-    alert("Game Over! Click OK to restart.");
-    initializeGame();
-    resetPipes();
-}
-
-//reset the pipes
-function resetPipes() {
-    const pipes = document.querySelectorAll('.pipe');
-    pipes.forEach(element => {
-        element.style.left = "400px";
-    })
-}
-
-//increase difficulty 
-function increaseDifficulty() {
-    if (!isGameOver) {
-        gameSpeed += 0.01;  // Gradually increase game speed
-        setTimeout(increaseDifficulty, 1000);  // Call this function every second
-    }
-}
-
-//game loop
-function gameLoop() {
-    if(!isGameOver) {
-        applyGravity();
-        movePipes();
-        detectCollision();
-        requestAnimationFrame(gameLoop);
-    }
-}
-
-//keep track of scores
 let score = 0;
-function increaseScore() {
-    if (!isGameOver) {
-        score++;
-        document.getElementById('score').innerText = "Score : " + score;
-        setTimeout(increaseScore, 1000);  // Update score every second
-    }
+
+function jump() {
+    velocity = -5;
 }
 
-document.addEventListener("DOMContentLoaded", function() {
-    initializeGame();
-    gameLoop();
-    increaseDifficulty();
-    increaseScore();
-})
+document.addEventListener("keydown", jump);
+document.addEventListener("click", jump);
+
+function createPipe() {
+    if (isGameOver) return;
+
+    let pipeTopHeight = Math.random() * 250 + 50;
+    let gap = 150;
+
+    let pipeTop = document.createElement("div");
+    let pipeBottom = document.createElement("div");
+    pipeTop.classList.add("pipe", "top");
+    pipeBottom.classList.add("pipe", "bottom");
+
+    pipeTop.style.height = pipeTopHeight + "px";
+    pipeTop.style.top = "0px";
+    pipeTop.style.left = "400px";
+
+    pipeBottom.style.height = (600 - pipeTopHeight - gap) + "px";
+    pipeBottom.style.bottom = "0px";
+    pipeBottom.style.left = "400px";
+
+    game.appendChild(pipeTop);
+    game.appendChild(pipeBottom);
+
+    let pipeLeft = 400;
+
+    let movePipe = setInterval(() => {
+        if (isGameOver) {
+            clearInterval(movePipe);
+            return;
+        }
+
+        pipeLeft -= 3;
+        pipeTop.style.left = pipeLeft + "px";
+        pipeBottom.style.left = pipeLeft + "px";
+
+        if (pipeLeft < 80 && pipeLeft > 77) {
+            score++;
+            scoreDisplay.innerText = score;
+        }
+
+        if (
+            pipeLeft < 130 &&
+            pipeLeft > 20 &&
+            (birdTop < pipeTopHeight ||
+             birdTop + 40 > pipeTopHeight + gap)
+        ) {
+            endGame();
+        }
+
+        if (pipeLeft < -60) {
+            pipeTop.remove();
+            pipeBottom.remove();
+            clearInterval(movePipe);
+        }
+
+    }, 20);
+}
+
+function gameLoop() {
+    if (isGameOver) return;
+
+    velocity += gravity;
+    birdTop += velocity;
+    bird.style.top = birdTop + "px";
+
+    bird.style.transform = `rotate(${velocity * 3}deg)`;
+
+    if (birdTop <= 0 || birdTop >= 560) {
+        endGame();
+    }
+
+    requestAnimationFrame(gameLoop);
+}
+
+function endGame() {
+    isGameOver = true;
+    gameOverScreen.style.display = "flex";
+}
+
+function restartGame() {
+    location.reload();
+}
+
+setInterval(createPipe, 2000);
+gameLoop();
